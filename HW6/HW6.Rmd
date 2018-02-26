@@ -1,0 +1,121 @@
+---
+title: "Problem Set 6"
+author: "Jay Lee"
+date: "October 29, 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1.
+
+I based this on the tree I drew in 4a because figuring out how to draw an arbitrary tree took a while, so I just recycled a bunch of it.
+
+```{r echo = F}
+plot(x = NA, y = NA, axes = F, xlab = NA, ylab = NA, xlim = c(-.1,1), ylim = c(0,1))
+segments(.5, .9, 0, .9)
+segments(0, .9, 0, .7)
+segments(.5, .9, .5, .7)
+segments(.3, .7, .7, .7)
+segments(.3, .7, .3, .5)
+segments(.7, .7, .7, .5)
+segments(.15, .5, .45, .5)
+segments(.15, .5, .15, .3)
+segments(.45, .5, .45, .3)
+segments(.35, .3, .55, .3)
+segments(.35, .3, .35, .1)
+segments(.55, .3, .55, .1)
+segments(-.1, .7, .1, .7)
+segments(-.1, .7, -.1, .5)
+segments(.1, .7, .1, .5)
+text(x = c(.25, .5, .3, .45, 0, .7, .15, .35, .55, -.1, .1),
+     y = c(.95, .75, .55, .35, .75, .45, .25, .05, .05, .45, .45),
+     labels = c(expression(X[1]<t[1]), expression(X[1]<t[3]), expression(X[2]<t[4]), expression(X[1]<t[5]), expression(X[2]<t[2]),
+                expression(y[3]), expression(y[4]), expression(y[5]), expression(y[6]), expression(y[1]), expression(y[2])),
+     offset = 0)
+
+
+plot(c(0,1), c(0,1), type = "n", xlab = expression(X[1]), ylab = expression(X[2]), xaxt="n", yaxt="n")
+segments(.3, -1, .3, 2)
+segments(-1, .25, .3, .25)
+segments(.75, -1, .75, 2)
+segments(.3, .7, .75, .7)
+segments(.6, .7, .6, 2)
+text(x = c(.15, .15, .9, .5, .45, .7),
+     y = c(.1, .6, .5, .4, .9, .9),
+     labels = c(expression(R[1]), expression(R[2]), expression(R[3]), expression(R[4]), expression(R[5]), expression(R[6])), offset = 0)
+
+xtick<-c(.3, .75, .6)
+xnames <- c(expression(t[1]), expression(t[3]), expression(t[5]))
+axis(side=1, at=xtick, labels = FALSE)
+text(x=xtick,  par("usr")[3], 
+     labels = xnames, pos = 1, xpd = TRUE)
+
+ytick<-c(.25, .7)
+ynames <- c(expression(t[2]), expression(t[4]))
+axis(side=2, at=ytick, labels = FALSE)
+text(par("usr")[1], ytick,  
+     labels = ynames, pos = 2, xpd = TRUE)
+```
+
+### 3.
+
+Because each of these must be computed for each region, I only show the plot for region $m$ here.
+
+```{r}
+library(ggplot2)
+ggplot(data.frame(x=c(0, 1)), aes(x)) +
+  stat_function(fun=function(x) -abs(x - .5) + .5, col = "blue") +
+  stat_function(fun=function(x) 2*x*(1-x), col = "red") +
+  stat_function(fun=function(x) -x*log(x) + -(1-x)*log(1-x), col = "darkgreen") +
+  ylim(0,1) +
+  labs(x = expression(hat(p)[m1])) +
+  annotate("text", x = .95, y = c(.75, .625, .5), label = c("entropy", "GINI", "classification \n error"), col = c("darkgreen", "red", "blue"))
+       
+```
+
+### 4.
+
+(a)
+
+```{r echo = F}
+plot(x = NA, y = NA, axes = F, xlab = NA, ylab = NA, xlim = c(.15,1), ylim = c(0.05,1))
+segments(.5, .9, 1, .9)
+segments(1, .9, 1, .7)
+segments(.5, .9, .5, .7)
+segments(.3, .7, .7, .7)
+segments(.3, .7, .3, .5)
+segments(.7, .7, .7, .5)
+segments(.15, .5, .45, .5)
+segments(.15, .5, .15, .3)
+segments(.45, .5, .45, .3)
+segments(.35, .3, .55, .3)
+segments(.35, .3, .35, .1)
+segments(.55, .3, .55, .1)
+text(x = c(.75, .5, .3, .45, 1, .7, .15, .35, .55),
+     y = c(.95, .75, .55, .35, .65, .45, .25, .05, .05),
+     labels = c(expression(X[1]<1), expression(X[2]<1), expression(X[1]<0), expression(X[2]<0),
+                "5", "15", "3", "10", "0"),
+     offset = 0)
+```
+
+(b)
+
+```{r echo = F}
+plot(c(-1,3), c(-1,3), type = "n", xlab = expression(X[1]), ylab = expression(X[2]))
+segments(-2, 1, x1 = 4, y1 = 1)
+segments(1, -2, x1 = 1, y1 = 1)
+segments(-2, 2, x1 = 4, y1 = 2)
+segments(0, 1, x1 = 0, y1 = 2)
+text(c(0, 2, -0.5, 1.5, 1),
+     y = c(0, 0, 1.5, 1.5, 2.5),
+     labels = c("-1.80", "0.63", "-1.06", "0.21", "2.49"), offset = 0)
+```
+
+### 5.
+
+Because the 10 probabilities are {0.1, 0.15, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75}, the average prediction is `r mean(c(0.1, 0.15, 0.2, 0.2, 0.55, 0.6, 0.6, 0.65, 0.7, 0.75))`. Since this mean is less than .5, the prediction using the "average" method is Green. 6 of the 10 probabilities classify the point as Red, however, so the prediction using the "majority vote" method is Red.
+
+

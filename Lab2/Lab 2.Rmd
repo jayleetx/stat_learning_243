@@ -1,0 +1,153 @@
+---
+title: "Fijian Earthquakes"
+author: "Jay Lee"
+date: "9/7/2017"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+data(quakes)
+library(ggplot2)
+library(dplyr)
+library(leaflet)
+set.seed(365)
+```
+
+### Earthquake Detection
+
+1. 
+
+```{r}
+ggplot(quakes, aes(x = mag, y = stations)) +
+  geom_point() +
+  geom_jitter()
+```
+
+The data shows a strong, positive, linear relationship.
+
+
+2. If there was no relationship between these two values, we would expect the slope of the model to be 0 and the y-intercept to be $\bar{y}$.
+
+
+3. 
+
+```{r}
+m1 <- lm(stations ~ mag, quakes)
+summary(m1)
+ggplot(quakes, aes(x = mag, y = stations)) +
+  geom_point() +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = F)
+```
+
+For every increase of 1 in magnitude, we would expect a quake to be felt by 46.2822 more stations.
+
+4. 
+
+```{r echo = T}
+x_bar <- mean(quakes$mag)
+y_bar <- mean(quakes$stations)
+beta_1 <- sum((quakes$mag - x_bar) * (quakes$stations - y_bar)) / sum((quakes$mag - x_bar)^2)
+beta_0 <- mean(quakes$stations)-beta_1*mean(quakes$mag)
+beta_1
+beta_0
+```
+
+
+5. 
+
+```{r echo = T}
+lower <- 46.2822 - 1.962*.9034
+upper <- 46.2822 + 1.962*.9034
+lower
+upper
+confint(m1, "mag")
+```
+
+6. 
+
+```{r}
+46.2822*7.0-180.4243
+```
+
+
+7. Data description, inference, inference, inference, prediction, prediction
+
+### Simulation
+
+8. 
+
+```{r}
+set.seed(385)
+sim_data <- sample_n(quakes, 1000, replace = T) %>%
+  select(mag)
+head(sim_data)
+```
+
+
+9. 
+
+```{r}
+f_hat <- function(x) {
+  46.2822*x-180.4243
+}
+sim_data <- sim_data %>%
+  mutate(y_hat = f_hat(mag))
+head(sim_data)
+```
+
+
+10. 
+
+```{r}
+set.seed(1738)
+RSS <- sum((m1$residuals)^2)
+epsilon <- rnorm(1000, mean = 0, sd = sqrt(RSS/(1000-2)))
+y <- sim_data$y_hat + epsilon
+sim_data <- data.frame(sim_data, epsilon, y) %>%
+  mutate(y = ifelse(y < 0, 0, y)) # can't be detected by a negative number of stations
+head(sim_data)
+```
+
+
+11. 
+
+```{r}
+
+ggplot(sim_data, aes(x = mag, y = y)) +
+  geom_point() +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = F) +
+  geom_abline(slope = beta_1, intercept = beta_0, color = "red")
+```
+
+The simulated data set appears to match the original data set well. My simulated points (1000 uniform random draws from the original vector of `mag`) don't appear to have quite as many values for `mag` between 4.0 and 4.5 as the original, so there are fewer points there. This is reflected somewhat in the means of the two `mag` vectors.
+
+```{r echo = T}
+mean(quakes$mag)
+mean(sim_data$mag)
+```
+
+If we form a linear model (below) of the simulated data, we see that both of the simulated model's parameters are inside the 95% confidence intervals for our original model. The original model is plotted in red above, and the simulated model in blue.
+
+```{r echo = T}
+sim <- lm(y~mag, sim_data)
+coefficients(sim)
+confint(m1, "mag")
+confint(m1, "(Intercept)")
+```
+
+
+### Challenge Problem
+
+```{r echo = T}
+map <- leaflet(quakes) %>%
+  addProviderTiles(providers$OpenMapSurfer.Roads) %>%
+  addCircleMarkers(radius = ~mag*10-39, fill = F, weight = 1, opacity = ~stations/200+.1, color = "darkgreen", label = ~as.character(mag))
+map
+```
+

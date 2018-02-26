@@ -1,0 +1,224 @@
+---
+title: "Lab 6"
+author: "Jay Lee"
+date: "November 4, 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(gbm)
+library(knitr)
+library(rlist)
+library(randomForest)
+library(dplyr)
+library(broom)
+```
+
+## Ransom notes keep falling
+
+### The data
+
+```{r}
+lettersdf <- read.csv("https://raw.githubusercontent.com/andrewpbray/math-243/master/assets/data/letters.csv",
+                      header = FALSE)
+set.seed(1)
+train <- sample(1:nrow(lettersdf), nrow(lettersdf) * .75)
+```
+
+### Building a boosted tree
+
+```{r}
+boost_char <- gbm(V1 ~ ., data = lettersdf[train, ],
+                 distribution = "multinomial",
+                 n.trees = 50,
+                 shrinkage = 0.1)
+summary(boost_char)
+```
+
+The most important variable in the boosted tree is `r summary(boost_char)[1,1]`, which tracks the correlation of vertical variance with horizontal position.
+
+### Assessing predictions
+
+a.
+
+```{r}
+yhat <- predict(boost_char,
+                              newdata = lettersdf[-train, ],
+                              n.trees = 50,
+                              type = "response")
+predicted <- LETTERS[apply(yhat, 1, which.max)]
+conf_mat <- table(predicted, lettersdf[-train, 1])
+kable(conf_mat)
+```
+
+b.
+
+```{r}
+mcr <- 1 - sum(diag(conf_mat)) / 5000
+mcr
+```
+
+Our misclassification rate, overall, is `r mcr`.
+
+c.
+
+```{r}
+letter_mcr <- function(x) {
+  1 - conf_mat[x, x] / sum(conf_mat[ ,x])
+}
+letter_mcrs <- sapply(1:26, letter_mcr)
+LETTERS[which.max(letter_mcrs)]
+max(letter_mcrs)
+```
+
+Judged by maximum misclassification rate (`r max(letter_mcrs)`), the letter `r LETTERS[which.max(letter_mcrs)]` was the hardest to predict.
+
+d.
+
+```{r}
+mixup <- function(x) {
+  max <- max(conf_mat[-x, x])
+  indices <- which(conf_mat[ ,x] == max)
+  LETTERS[indices]
+}
+closest <- lapply(1:26, mixup)
+
+matches <- list()
+for (i in 1:26) {
+  for (j in 1:26) {
+    first <- LETTERS[i] %in% closest[j]
+    second <- LETTERS[j] %in% closest[i]
+    if (first & second) {
+      matches <- list.append(matches, LETTERS[c(i, j)])
+    }
+  }
+}
+matches
+```
+
+I checked to see if there were any pairs of letters which were most often misclassified as each other. By this metric, B/D was the hardest pair of letters to tell apart. Along the way I messed this up and ran it on some different test data, which also gave B/R and M/N as tricky pairs.
+
+```{r}
+table(unlist(closest))
+```
+
+In addition, from the above table we can see that the letters B, O, and X were guessed incorrectly on the most letters by the model.
+
+### Slow the learning
+
+```{r}
+boost_char_2 <- gbm(V1 ~ ., data = lettersdf[train, ],
+                 distribution = "multinomial",
+                 n.trees = 500,
+                 shrinkage = 0.01)
+summary(boost_char_2)
+```
+
+a.
+
+```{r}
+yhat2 <- predict(boost_char_2,
+                              newdata = lettersdf[-train, ],
+                              n.trees = 500,
+                              type = "response")
+predicted2 <- LETTERS[apply(yhat2, 1, which.max)]
+conf_mat2 <- table(predicted2, lettersdf[-train, 1])
+mcr2 <- 1 - sum(diag(conf_mat2)) / 5000
+mcr2
+```
+
+Our misclassification rate, overall, is `r mcr2`, which is minutely higher than our original boosted tree.
+
+b.
+
+```{r}
+mixup2 <- function(x) {
+  max <- max(conf_mat2[-x, x])
+  indices <- which(conf_mat2[ ,x] == max)
+  LETTERS[indices]
+}
+closest2 <- lapply(1:26, mixup2)
+
+matches2 <- list()
+for (i in 1:26) {
+  for (j in 1:26) {
+    first <- LETTERS[i] %in% closest2[j]
+    second <- LETTERS[j] %in% closest2[i]
+    if (first & second) {
+      matches2 <- list.append(matches2, LETTERS[c(i, j)])
+    }
+  }
+}
+matches2
+```
+
+This time, the pair F/P was harder for the model to distinguish (in addition to B/D), by our metric for that.
+
+## Communities and Crime
+
+```{r}
+crime <- read.csv("http://andrewpbray.github.io/data/crime-train.csv", na = c("", "NA", "?")) %>%
+  select(state, population:PctSameState85,
+                LandArea:PctUsePubTrans, ViolentCrimesPerPop)
+set.seed(1105171544)
+training <- sample(1:nrow(crime), nrow(crime) * .75)
+```
+
+### Growing a random forest
+
+```{r}
+crime_bag <- randomForest(ViolentCrimesPerPop ~ ., data = crime, subset = training, mtry = ncol(crime)-1)
+crime_rf <- randomForest(ViolentCrimesPerPop ~ ., data = crime, subset = training)
+bag_guess <- predict(crime_bag, newdata = crime[-training, ], type = "response")
+bag_error <- mean((bag_guess - crime$ViolentCrimesPerPop[-training])^2)
+forest_guess <- predict(crime_rf, newdata = crime[-training, ], type = "response")
+forest_error <- mean((forest_guess - crime$ViolentCrimesPerPop[-training])^2)
+
+group_C_fit <- function(training_data) {
+lm(ViolentCrimesPerPop~ population + numbUrban + PctKids2Par + PctIlleg + PctHousOccup + PctHousOwnOcc + NumStreet + racePctWhite*PctWorkMom + MalePctDivorce*PctPersDenseHous, data = training_data)
+}
+group_C_MSE <- function(model, data){ 
+  SE <- c()
+  data <- data %>%
+    mutate(y_hat = predict(model,data),
+           sq_error = (ViolentCrimesPerPop-y_hat)^2)
+  mean(data$sq_error)
+}
+
+crime_linear <- group_C_fit(crime[training, ])
+linear_guess <- predict(crime_linear, crime[-training, ], type = "response")
+linear_error <- mean((linear_guess - crime$ViolentCrimesPerPop[-training])^2)
+
+bag_error
+forest_error
+linear_error
+```
+
+We get a slight improvement from the random forest, but neither performs as well as the linear regression.
+
+### Variance importance
+
+```{r}
+tidy(summary(crime_linear)) %>%
+  select(term, estimate, p.value) %>%
+  arrange(desc(estimate))
+varImpPlot(crime_rf)
+```
+
+The ordering of importance isn't entirely the same, but we see the same types of variables show up in both models: `PctKids2Par`, `PctIlleg`, `racePctWhite`, etc.
+
+### One last boost
+
+```{r}
+boost_crime <- gbm(ViolentCrimesPerPop ~ ., data = crime[training, ],
+                 distribution = "multinomial",
+                 n.trees = 300,
+                 shrinkage = 0.05,
+                 interaction.depth = 2)
+double_guess <- predict(boost_crime, newdata = crime[-training, ], n.trees = 300, type = "response")
+double_error <- mean((double_guess - crime$ViolentCrimesPerPop[-training])^2)
+double_error
+```
+
+The boosted tree MSE is much worse than all 3 of the above models. I don't really have a theoretical concept about the crime data to think about why this happened.

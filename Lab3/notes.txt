@@ -1,0 +1,47 @@
+Things that might affect crime (first look at codebook)
+
+- population
+- household size
+- race
+- age
+- Urban
+- **Income**
+- education
+- Unemployment?
+- 2-parent households
+- Percent of housing occupied
+- Homelessness
+
+
+Things that look like they have an affect (shiny plots)
+
+- racePctWhite (linear, decreasing)
+- medIncome (nonlinear, decreasing)
+- pctWInvInc (nonlinear, decreasing)
+- pctWPubAsst (linearish, increasing)
+- medFamInc (nonlinear, decreasing)
+- PctPopUnderPov (linear, increasing)
+- PctNotHSGrad (nonlinear, increasing)
+- PctUnemployed (linear, increasing)
+- PctOccupMgmtProf (linear, decreasing)
+- TotalPctDiv (very nonlinear, increasing)
+- PctFam2Par (very nonlinear, decreasing)
+- PctIlleg (linear, increasing)
+- PctPersOwnOccup (nonlinear, decreasing)
+- PctPersDenseHous (linear, increasing)
+- PctHousLess3BR (very nonlinear, increasing)
+- PctHousOwnOcc (nonlinear, decreasing)
+
+Things that are probably correlated with each other
+
+- Anything that has "number of" and "percentage of" the same thing
+- Race: racepctblack, racePctWhite, racePctAsian, racePctHisp
+- Age: agePct12t21, agePct12t29, agePct16t24, agePct65up, pctWSocSec, pctWRetire
+- Income: medIncome, medFamInc, perCapInc, whitePerCap, blackPerCap, indianPerCap, AsianPerCap, OtherPerCap, HispPerCap
+- Poverty: PctPopUnderPov, pctWPubAsst
+- Education: PctLess9thGrade, PctNotHSGrad, PctBSorMore
+- Employment: PctUnemployed, PctEmploy
+- Divorce: MalePctDivorce, FemalePctDiv, TotalPctDiv
+- 2-parent households: PctFam2Par, PctKids2Par, PctYoungKids2Par, PctTeen2Par
+- Housing: PctLargHouseOccup, PersPerOwnOccHous, PersPerRentOccHouse, PctPersOwnOccup
+- Housing: HousVacant, PctHousOccup

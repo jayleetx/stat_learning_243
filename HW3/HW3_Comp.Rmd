@@ -1,0 +1,56 @@
+---
+title: "HW3 Comp"
+author: "Jay Lee"
+date: "September 25, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(glmnet)
+library(dplyr)
+nj <- read.csv("http://andrewpbray.github.io/data/crime-train.csv", na = c("", "NA", "?"))
+nj <- nj %>%select(population:PctSameState85, LandArea:PctUsePubTrans, ViolentCrimesPerPop)
+
+```
+
+```{r ridge}
+x <- model.matrix(ViolentCrimesPerPop ~ ., nj)[ ,-1]
+y <- nj$ViolentCrimesPerPop
+grid <- 10^seq(10,-2,length = 100)
+ridge.mod <- glmnet(x, y, alpha = 0, lambda = grid)
+set.seed(4)
+cvfit.ridge <- cv.glmnet(x, y, alpha = 0, lambda = grid)
+lambda.ridge <- cvfit.ridge$lambda.min
+pred.ridge <- predict(cvfit.ridge, newx = x, s = lambda.ridge)
+mse.ridge <- mean((pred.ridge-y)^2)
+```
+
+```{r lasso}
+lasso.mod <- glmnet(x, y, alpha = 1, lambda = grid)
+set.seed(8)
+cvfit.lasso <- cv.glmnet(x, y, alpha = 1, lambda = grid)
+lambda.lasso <- cvfit.lasso$lambda.min
+pred.lasso <- predict(cvfit.lasso, newx = x, s = lambda.lasso)
+mse.lasso <- mean((pred.lasso-y)^2)
+```
+
+### (a)
+
+```{r}
+lasso.coef <- predict(lasso.mod, type = "coefficients", s = lambda.lasso)
+length(lasso.coef[lasso.coef != 0])
+```
+
+14 coefficients are non-zero (15 minus 1 intercept).
+
+### (b)
+
+```{r}
+mse.ridge
+mse.lasso
+```
+
+### (c)
+
+They're different in this case because the ridge regression model has no coefficients valued at zero. If the lasso regression had no zero coefficients, the training MSEs would be more similar.

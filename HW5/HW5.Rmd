@@ -1,0 +1,74 @@
+---
+title: "Homework 5"
+author: "Jay Lee"
+date: "October 13, 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(boot)
+library(glmnet)
+```
+
+**4.** One possible solution is as follows, using the bootstrap method. We resample (with replacement) many samples of size $n$ from our original data set of size $n$. For each of these resamples, we use the same statistical learning method to predict some response value $Y$ for the same particular input value $X$. Because each model will train on different data, the models will predict different values for $Y$. This gives us a simulated distribution of $Y^*$, which we can compute the standard deviation of to estimate the standard deviation of our prediction $Y$.
+
+**8.**
+
+(a)
+```{r}
+set.seed(1)
+x <- rnorm(100)
+y <- x - 2*x^2 + rnorm(100)
+parab <- data.frame(x,y)
+```
+
+$n=100$, $p=1$, $X \sim Norm(\mu = 0, \sigma = 1)$, $Y \sim Norm(\mu = X-2X^2, \sigma = 1)$
+
+(b)
+
+```{r}
+ggplot(parab, aes(x, y)) + geom_point()
+```
+
+The data follows a negative quadratic shape, and has more points clustered in the middle at $(x,y)\approx(0,0)$ than on the "outside" of the shape.
+
+(c)
+
+```{r}
+set.seed(1041)
+cv_errors <- rep(NA, 4)
+for (i in seq_len(4)) {
+  poly_fit <- glm(y ~ poly(x, i, raw = T), data = parab)
+  cv_errors[i] <- cv.glm(parab, poly_fit)$delta[1]
+}
+cv_errors
+```
+
+(d)
+
+```{r}
+set.seed(1232)
+cv_errors_2 <- rep(NA, 4)
+for (i in seq_len(4)) {
+  poly_fit <- glm(y ~ poly(x, i, raw = T), data = parab)
+  cv_errors_2[i] <- cv.glm(parab, poly_fit)$delta[1]
+}
+cv_errors_2
+```
+
+The LOOCV errors are the same regardless of the seed used, because LOOCV is completely deterministic, i.e. it does not depend on any randomness. Each data point is valued equally.
+
+(e) The quadratic model in (c) had the lowest LOOCV error. This makes sense, because our true model is quadratic. A linear model has too much bias, and any more complex model increases variance without improving the model fit.
+
+(f)
+
+```{r}
+for (i in seq_len(4)) {
+  poly_fit <- glm(y ~ poly(x, i, raw = T), data = parab)
+  print(summary(poly_fit))
+}
+```
+
+These significance values show that in the linear case, the slope is somewhat significant and the intercept is very significant, then for all higher degree cases only the intercept, linear, and quadratic term have significant coefficient values. This agrees with the conclusions drawn from our CV results, which say that adding terms of order 3 or higher does not improve our model.

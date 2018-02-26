@@ -1,0 +1,58 @@
+---
+title: "Lab 3"
+author: "James Glass, Jay Lee, Kevin Wong"
+date: "September 14, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(leaps)
+nj <- read.csv("http://andrewpbray.github.io/data/crime-train.csv", na = c("", "NA", "?"))
+nj_full <- read.csv("crime-test.csv", na = c("", "NA", "?"))
+attach(nj)
+```
+
+```{r best fit}
+group_C_best_fit <- function(training_data) {
+lm(ViolentCrimesPerPop ~ population + racePctWhite + numbUrban + pctWSocSec + MalePctDivorce + PctIlleg + PersPerOccupHous + PctHousLess3BR + RentLowQ + MedRent + MedOwnCostPctIncNoMtg + NumStreet, data = training_data)
+}
+```
+
+```{r experimental fit}
+group_C_experimental_fit <- function(training_data) {
+lm(ViolentCrimesPerPop ~ racePctWhite + racePctHisp + pctUrban + PctEmploy + MalePctDivorce + TotalPctDiv + PctIlleg + PctImmigRec5 + PctImmigRec8 + PctHousOccup + NumStreet + PctSameCity85, data = training_data)
+}
+```
+
+```{r fit}
+group_C_fit <- function(training_data) {
+lm(ViolentCrimesPerPop~ population + numbUrban + PctKids2Par + PctIlleg + PctHousOccup + PctHousOwnOcc + NumStreet + racePctWhite*PctWorkMom + MalePctDivorce*PctPersDenseHous, data = training_data)
+}
+```
+
+```{r MSE}
+group_C_MSE <- function(model, data){ 
+  SE <- c()
+  data <- data %>%
+    mutate(y_hat = predict(model,data),
+           sq_error = (ViolentCrimesPerPop-y_hat)^2)
+  mean(data$sq_error)
+}
+```
+
+```{r auto forward}
+train <- select(nj, population:PctSameState85,
+                LandArea:PctUsePubTrans, ViolentCrimesPerPop)
+mf <- regsubsets(ViolentCrimesPerPop ~ . , data = train, nvmax = 25, method = "forward")
+coef(mf,which.min(summary(mf)$bic))
+```
+
+This one below, the backwards fit, had the best BIC. As of 11AM we weren't able to get these into a model type generally, so `group_C_best_fit` just calls them manually.
+
+```{r auto backward}
+mb <- regsubsets(ViolentCrimesPerPop ~ . , data = train, nvmax = 25, method = "backward")
+coef(mb,which.min(summary(mb)$bic))
+```
+

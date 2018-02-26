@@ -1,0 +1,93 @@
+---
+title: "Lab 1"
+author: "Jay Lee"
+date: "9/5/2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(ggplot2)
+data(Boston)
+```
+
+1. How many rows are in this data set? How many columns? What do the rows and columns represent?
+
+```{r}
+dim(Boston)
+```
+
+There are 506 rows and 14 columns. Each row is one town around Boston, and each column is a demographic variable recorded for the town.
+
+
+2. Make some (2-3) pairwise scatterplots of the predictors (columns) in this data set. Describe your findings.
+
+```{r}
+ggplot(Boston, aes(indus, nox)) +
+  geom_point()
+ggplot(Boston, aes(zn, rm)) +
+  geom_point()
+ggplot(Boston, aes(age, dis)) +
+  geom_point()
+```
+
+The first plot shows a weak to moderate positive linear relationship between the proportion of non-retail business acres per town and the nitrogen oxide concentration per town. The second shows proportion of residential land zoned for large lots and average number of rooms per dwelling. This shows some positive relationship among non-zero values of `zn`, but so many towns have a value of 0 for `zn` that it complicates a relationship. The final plot shows a weakly decreasing linear or fan-shaped relationship between the town's "age" and how far from major employment centers it is.
+
+
+3. Are any of the predictors associated with per capita crime rate? If so, explain the relationship.
+
+```{r}
+r <- lm(crim~ zn + nox + dis + rad + black + medv , data = Boston)
+summary(r)
+ggplot(Boston, aes(x = rad, y = crim)) + geom_point()
+ggplot(Boston, aes(x = medv, y = crim)) + geom_point()
+ggplot(Boston, aes(x = dis, y = crim)) + geom_point()
+ggplot(Boston, aes(x = zn, y = crim)) + geom_point()
+ggplot(Boston, aes(x = black, y = crim)) + geom_point()
+ggplot(Boston, aes(x = nox, y = crim)) + geom_point()
+```
+
+The model above (found using backwards selection) shows all the variables with a p-value above .05. Uopn closer examination of the variables, however, a linear relationship is not appropriate to fit for almost all of them. Many show a curved, fan-shaped, or unusual L-shaped distribution.
+
+
+4. Are there any suburbs of Boston that appear to have particularly high crime rates? Tax rate? Pupil-teacher ratios? Comment on the range of each predictor.
+
+```{r}
+ggplot(Boston, aes(x = crim)) +
+  geom_histogram()
+ggplot(Boston, aes(x = tax)) +
+  geom_histogram()
+ggplot(Boston, aes(x = ptratio)) +
+  geom_histogram()
+```
+
+The distribution of crime rate is super right skewed, with the vast majority clustered around 0 and a small handful past 50. Tax rate seems to have a semi-normal or bimodal distribution aronud 300, but then a large amount close to 675. Pupil-to-teacher ratio is mostly left-skewed, with a large mode at 20.
+
+
+5. How many of the suburbs in this data set bound the Charles River?
+
+```{r}
+sum(Boston$chas)
+```
+
+
+6. What is the median pupil-teacher ratio among the towns in this data set?
+
+```{r}
+median(Boston$ptratio)
+```
+
+
+7. If you want to build a model to predict the average value of a home based on the other variables, what is your output/response? What is your input?
+
+```{r}
+q <- lm(medv~lstat + black + ptratio + tax + rad + dis + rm + nox + chas + zn + crim, data = Boston)
+summary(q)
+```
+
+To build a linear model, we have
+
+Output: `medv`
+
+Input: `crim, zn, chas, nox, rm, dis, rad, tax, ptratio, black, lstat` (the other variables, at least the ones that are statistically significant)

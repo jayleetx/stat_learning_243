@@ -1,0 +1,127 @@
+---
+title: 'Lab 4: Classification'
+author: "Jay Lee"
+date: "October 4, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+war <- read.csv("http://www.stat.cmu.edu/~cshalizi/uADA/15/hw/06/ch.csv", row.names = 1)
+war_na <- na.omit(war)
+library(glmnet)
+library(MASS)
+library(dplyr)
+```
+
+## 1. Estimate
+
+```{r}
+logit <- glm(start ~ exports + I(exports^2) + schooling + growth + peace + concentration + lnpop + fractionalization + dominance, data = war, family = binomial)
+summary(logit)
+```
+
+`exports`, `exports^2`, `schooling`, `growth`, `peace`, `concentration`, `lnpop`, and `fractionalization` (everything except for `dominance`) are all significant at the 5% level.
+
+## 2. Interpretation
+
+1.
+
+```{r}
+india75 <- war %>%
+  filter(country == "India", year == 1975)
+
+india_sch <- india75
+india_sch[1,5] <- india_sch[1,5]+30
+
+india_exp <- india75
+india_exp[1,4] <- india_exp[1,4]+0.1
+
+india <- rbind(india75, india_sch, india_exp)
+
+predict(logit, newdata = india, type = "response")
+```
+
+
+
+2.
+
+```{r}
+nigeria65 <- war %>%
+  filter(country == "Nigeria", year == 1965)
+
+nigeria_sch <- nigeria65
+nigeria_sch[1,5] <- nigeria_sch[1,5]+30
+
+nigeria_exp <- nigeria65
+nigeria_exp[1,4] <- nigeria_exp[1,4]+0.1
+
+nigeria <- rbind(nigeria65, nigeria_sch, nigeria_exp)
+
+predict(logit, newdata = nigeria, type = "response")
+```
+
+
+3. The changes in predicted probability between the two countries should not be equal, because the "starting value" for the two countries is different. For the `schooling` variable, the difference between the change in the two countries is relatively small compared to the change, because the coefficient on `schooling` is relatively small. In contrast, because the coefficient on `exports` is relatively large, the difference in change between the countries is exaggerated by the non-linear logistic function.
+
+## 3. Confusion
+
+1.
+
+```{r}
+logit_pred <- ifelse(logit$fit < 0.5, "No", "Yes")
+conf_logit <- table(logit_pred, war_na$start)
+conf_logit
+```
+
+
+2.
+
+```{r}
+logit_mcr <- 1 - sum(diag(conf_logit))/length(logit_pred)
+logit_mcr
+```
+
+3.
+
+```{r}
+naive_full <- 1 - mean(war$start == 0, na.rm = T)
+naive_full
+
+naive_pred <- 1 - mean(war_na$start == 0)
+naive_pred
+```
+
+In both cases, the foolish pundit does slightly better than our model.
+
+## 4. Comparison
+
+1.
+
+```{r}
+lda <- lda(start ~ exports + I(exports^2) + schooling + growth + peace + concentration + lnpop + fractionalization + dominance, data = war_na)
+lda_pred <- ifelse(predict(lda)$class == 1, "Yes", "No")
+conf_lda <- table(lda_pred, war_na$start)
+conf_lda
+lda_mcr <- 1 - sum(diag(conf_lda))/length(lda_pred)
+lda_mcr
+```
+
+2.
+
+```{r}
+qda <- qda(start ~ exports + I(exports^2) + schooling + growth + peace + concentration + lnpop + fractionalization + dominance, data = war_na)
+qda_pred <- ifelse(predict(qda)$class == 1, "Yes", "No")
+conf_qda <- table(qda_pred, war_na$start)
+conf_qda
+qda_mcr <- 1 - sum(diag(conf_qda))/length(qda_pred)
+qda_mcr
+```
+
+3.
+
+```{r}
+c(logit_mcr, lda_mcr, qda_mcr)
+```
+
+On this data, LDA was better at predicting the training data than a logistic model, and the logistic model was better than QDA at predicting. I think LDA was better because there were so few observations where `start == 1`, so a logistic model would have a harder time classifying the probability that a civil war started as greater than 0.5. Then, I think QDA was an overfitting of the data, and the two classes actually have similar standard deviations on the variables.
